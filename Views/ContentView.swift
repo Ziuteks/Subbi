@@ -1,51 +1,47 @@
 import SwiftUI
 
+enum AppTab: Hashable {
+    case home, calendar, stats, add, settings
+}
+
 struct ContentView: View {
-    @EnvironmentObject private var store: SubscriptionStore
-    @State private var isShowingAddSheet = false
+    @EnvironmentObject var store: SubscriptionStore
+    @State private var selection: AppTab = .home
+    @State private var showAdd = false
 
     var body: some View {
-        NavigationStack {
-            List {
-                Section {
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Miesięcznie wydajesz")
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-                        Text(store.monthlyTotal, format: .currency(code: "PLN"))
-                            .font(.system(size: 32, weight: .bold, design: .rounded))
-                    }
-                    .padding(.vertical, 8)
-                }
+        TabView(selection: $selection) {
+            HomeView()
+                .tabItem { Label("Główna", systemImage: "house.fill") }
+                .tag(AppTab.home)
 
-                Section("Twoje subskrypcje") {
-                    if store.subscriptions.isEmpty {
-                        ContentUnavailableView(
-                            "Brak subskrypcji",
-                            systemImage: "repeat",
-                            description: Text("Dodaj pierwszą subskrypcję, aby śledzić wydatki.")
-                        )
-                    } else {
-                        ForEach(store.subscriptions) { subscription in
-                            SubscriptionRow(subscription: subscription)
-                        }
-                        .onDelete(perform: store.delete)
-                    }
-                }
+            CalendarView()
+                .tabItem { Label("Kalendarz", systemImage: "calendar") }
+                .tag(AppTab.calendar)
+
+            StatsView()
+                .tabItem { Label("Statystyki", systemImage: "chart.bar.fill") }
+                .tag(AppTab.stats)
+
+            Color.clear
+                .tabItem { Label("Dodaj", systemImage: "plus") }
+                .tag(AppTab.add)
+
+            SettingsView()
+                .tabItem { Label("Ustawienia", systemImage: "gearshape") }
+                .tag(AppTab.settings)
+        }
+        // Zakładka „Dodaj" otwiera formularz wysuwany od dołu i nie zmienia ekranu.
+        .onChange(of: selection) { old, new in
+            if new == .add {
+                selection = old
+                showAdd = true
             }
-            .navigationTitle("Subskrypcje")
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button {
-                        isShowingAddSheet = true
-                    } label: {
-                        Label("Dodaj", systemImage: "plus")
-                    }
-                }
-            }
-            .sheet(isPresented: $isShowingAddSheet) {
-                AddSubscriptionView()
-            }
+        }
+        .sheet(isPresented: $showAdd) {
+            AddSubscriptionView()
+                .presentationDetents([.large])
+                .presentationDragIndicator(.visible)
         }
     }
 }
